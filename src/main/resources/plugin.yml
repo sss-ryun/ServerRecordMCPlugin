@@ -1,0 +1,25 @@
+name: ServerRecord
+main: me.pixeldroid.plugins.serverrecord
+version: "1.0"
+api-version: "1.15.2"
+author: Pixeldroid
+
+prefix: SRecord
+
+commands:
+  log:
+    description: Server Record exclusive command.
+    usage: /log <options>
+    permission: serverrecord.log
+    permission-message: You can't use this command.
+  record:
+    description: Server Record exclusive command.
+    usage: /record <options> <on|off>
+    permission: serverrecord.*
+    permission-message: You can't use this command.
+
+permissions:
+  serverrecord.*:
+    description: Administrator access
+  serverrecord.log:
+    description: Mod access

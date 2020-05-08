@@ -1,8 +1,9 @@
 name: ServerRecord
-main: me.pixeldroid.plugins.serverrecord
+main: me.pixeldroid.plugins.serverrecord.ServerRecordPlugin
 version: "1.0"
-api-version: "1.15.2"
+api-version: "1.15"
 author: Pixeldroid
+database: true
 
 prefix: SRecord
 

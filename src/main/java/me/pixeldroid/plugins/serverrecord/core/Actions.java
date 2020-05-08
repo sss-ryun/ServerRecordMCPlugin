@@ -1,0 +1,28 @@
+package me.pixeldroid.plugins.serverrecord.core;
+
+/*
+    BLOCKS
+ */
+
+public enum Actions {
+    BLOCK_BREAK,
+    BLOCK_BURN,
+    BLOCK_DAMAGE,
+    BLOCK_EXPLODE,
+    BLOCK_FERTILIZE,
+    BLOCK_FORM,
+    BLOCK_GROW,
+    BLOCK_IGNITE,
+    BLOCK_MULTIPLE,
+    BLOCK_PISTON,
+    BLOCK_PLACE,
+    BLOCK_SPREAD,
+    BLOCK_CAULDRON,
+    BLOCK_ENTITY_FORMED,
+    BLOCK_LEAVES_DECAY,
+    BLOCK_MOISTURE,
+    BLOCK_SIGN,
+    BLOCK_ABSORB
+
+
+}

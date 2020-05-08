@@ -6,11 +6,13 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
+        <module name="ServerRecord" />
         <module name="ServerRecordMCPlugin" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
-      <module name="ServerRecordMCPlugin" target="1.7" />
+      <module name="ServerRecord" target="1.8" />
+      <module name="ServerRecordMCPlugin" target="1.8" />
     </bytecodeTargetLevel>
   </component>
 </project>

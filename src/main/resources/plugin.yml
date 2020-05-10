@@ -18,6 +18,12 @@ commands:
     usage: /record <options> <on|off>
     permission: serverrecord.*
     permission-message: You can't use this command.
+  rollback:
+    aliases: [rback]
+    description: Server Record exclusive command.
+    usage: /rollback [-c playername] [-t time] [-r radius]
+    permission: serverrecord.*
+    permission-message: You can't use this command.
 
 permissions:
   serverrecord.*:

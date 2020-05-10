@@ -1,11 +1,16 @@
 package me.pixeldroid.plugins.serverrecord.core;
 
+import me.pixeldroid.plugins.serverrecord.records.BlockRecord;
+import me.pixeldroid.plugins.serverrecord.utils.SimpleMath;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.Location;
+import org.bukkit.block.Block;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitRunnable;
-import org.bukkit.util.Vector;
+import org.bukkit.scheduler.BukkitTask;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -14,7 +19,9 @@ import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.sql.*;
-import java.time.Instant;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.Scanner;
 import java.util.logging.Level;
 
@@ -93,7 +100,7 @@ public class ServerRecorder {
         createConfioFile();
     }
 
-    private void createConfioFile() {
+    public void createConfioFile() {
         File config = plugin.getDataFolder();
 
         if(!config.mkdir()) {
@@ -132,14 +139,15 @@ public class ServerRecorder {
 
     public boolean start() throws SQLException, ClassNotFoundException {
         if(isConfigured) {
-            if (connection != null && !connection.isClosed()) {
+            if(host.equals("example.com"))
                 return false;
-            }
+
+            if (connection != null && !connection.isClosed())
+                return false;
 
             synchronized (this) {
-                if (connection != null && !connection.isClosed()) {
+                if (connection != null && !connection.isClosed())
                     return false;
-                }
 
                 Class.forName("com.mysql.jdbc.Driver");
                 connection = DriverManager.getConnection("jdbc:mysql://" + this.host + ":" + this.port + "/" + this.database, this.username, this.password);
@@ -148,8 +156,9 @@ public class ServerRecorder {
             isStarted = true;
 
             return true;
-        } else
-            return false;
+        }
+
+        return false;
     }
 
     public void stop() {
@@ -176,7 +185,6 @@ public class ServerRecorder {
 
                         JSONObject recordJson = new JSONObject();
 
-                        recordJson.put("action", action.toString());
                         recordJson.put("cause", cause);
 
                         String playerName = "";
@@ -208,7 +216,8 @@ public class ServerRecorder {
 
                         recordJson.put("change", change);
 
-                        statement.executeUpdate("INSERT INTO " + table + " (RECORD,PLAYERNAME,PLAYERUUID,X,Y,Z) VALUES ('" + recordJson.toString() + "','" + playerName + "','" + playerUUID + "','" + x + "','" + y + "','" + z + "');");
+                        statement.executeUpdate("INSERT INTO " + table + " (ACTION,RECORD,PLAYERNAME,PLAYERUUID,X,Y,Z) VALUES ('" + action.toString() + "','" + recordJson.toString() + "','" + playerName + "','" + playerUUID + "','" + x + "','" + y + "','" + z + "');");
+                        statement.close();
                     } catch (SQLException e) {
                         plugin.getLogger().log(Level.SEVERE, e.toString());
                         plugin.getLogger().log(Level.SEVERE, "An error has occured while trying to connect to the MySQL Server.");
@@ -244,8 +253,101 @@ public class ServerRecorder {
         return def;
     }
 
-    public void rollback(Timestamp timestamp, int radius, String playerName) {
-        // TODO: Implement rollback system
+    public void rollback(CommandSender sender, Date date, int radius, String playerName) {
+        if(isStarted) {
+            BukkitRunnable runnable = new BukkitRunnable() {
+                @Override
+                public void run() {
+                    try {
+                        if (!(sender instanceof Player))
+                            return;
+
+                        Player player = (Player) sender;
+                        String query = "SELECT ID, TIMESTAMP, ACTION, PLAYERNAME, X, Y, Z FROM " + table + ";";
+                        Statement statement = connection.createStatement();
+                        Statement recordStatement = connection.createStatement();
+                        ResultSet resultSet = statement.executeQuery(query);
+
+                        while (resultSet.next()) {
+                            int id = resultSet.getInt("ID");
+                            Timestamp timestamp = resultSet.getTimestamp("TIMESTAMP");
+                            String action = resultSet.getString("ACTION");
+                            String playername = resultSet.getString("PLAYERNAME");
+                            int x = resultSet.getInt("X");
+                            int y = resultSet.getInt("Y");
+                            int z = resultSet.getInt("Z");
+
+                            if (timestamp.after(date)) {
+                                if (playerName.equals("@NO_PLAYER")) {
+                                    Location playerLocation = player.getLocation();
+                                    double dist = SimpleMath.dist(playerLocation.getX(), playerLocation.getY(), playerLocation.getZ(), x, y, z);
+                                    if (dist <= radius) {
+                                        rollbackBlock(recordStatement, id, player, x, y, z);
+                                    }
+                                } else if (radius == -1) {
+                                    if (playername.equals(playerName))
+                                        rollbackBlock(recordStatement, id, player, x, y, z);
+                                } else if (radius >= 0) {
+                                    if (playername.equals(playerName)) {
+                                        Location playerLocation = player.getLocation();
+                                        double dist = SimpleMath.dist(playerLocation.getX(), playerLocation.getY(), playerLocation.getZ(), x, y, z);
+                                        if (dist <= radius)
+                                            rollbackBlock(recordStatement, id, player, x, y, z);
+                                    }
+                                }
+                            }
+                        }
+
+                        statement.close();
+                        recordStatement.close();
+
+                    } catch (SQLException e) {
+                        plugin.getLogger().log(Level.SEVERE, e.toString());
+                        plugin.getLogger().log(Level.SEVERE, "An error has occured while trying to connect to the MySQL Server.");
+
+                        sender.sendMessage(ChatColor.RED + "Can't connect to the records.");
+
+                        return;
+                    } catch (JSONException e) {
+                        plugin.getLogger().log(Level.SEVERE, e.toString());
+                        plugin.getLogger().log(Level.SEVERE, "An error has occured while trying to connect to the MySQL Server.");
+
+                        sender.sendMessage(ChatColor.RED + "Failed to read the records.");
+
+                        return;
+                    }
+
+                    sender.sendMessage(ChatColor.GREEN + "Records rolled back.");
+                }
+            };
+
+            runnable.runTaskAsynchronously(plugin);
+        } else {
+            sender.sendMessage(
+                    ChatColor.RED + "Plugin is not started."
+            );
+        }
+    }
+
+    public void rollbackBlock(Statement statement, int id, Player player, int x, int y, int z) throws SQLException {
+        // TODO: Check the action and sort it
+        String queryRecord = "SELECT RECORD FROM " + table + " WHERE ID=" + id + ";" ;
+        ResultSet recordResult = statement.executeQuery(queryRecord);
+        while(recordResult.next()) {
+            JSONObject jsonObject = new JSONObject(recordResult.getString("RECORD"));
+            JSONObject change = jsonObject.getJSONObject("change");
+            Location blockLocation = new Location(player.getWorld(), x, y, z);
+
+            // Send the task back to the main thread
+            // It glitches in Async
+            new BukkitRunnable() {
+                @Override
+                public void run() {
+                    blockLocation.getBlock().setBlockData(plugin.getServer().createBlockData(change.getString("brokenBlockData")));
+                }
+            }.runTask(plugin);
+        }
+        recordResult.close();
     }
 
 }

@@ -1,8 +1,10 @@
 package me.pixeldroid.plugins.serverrecord;
 
+import me.pixeldroid.plugins.serverrecord.commands.RollbackCommand;
 import me.pixeldroid.plugins.serverrecord.core.ServerRecorder;
 import me.pixeldroid.plugins.serverrecord.listeners.BlockListener;
 import org.bukkit.Bukkit;
+import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -14,6 +16,8 @@ public class ServerRecordPlugin extends JavaPlugin {
     private PluginManager pluginManager;
 
     private ServerRecorder serverRecorder;
+
+    // Listeners
     private BlockListener blockListener;
 
     @Override
@@ -22,6 +26,7 @@ public class ServerRecordPlugin extends JavaPlugin {
 
         serverRecorder = new ServerRecorder(this);
 
+        // Log to the console whether the plugin has successfully started
         try {
             boolean isStarted = serverRecorder.start();
 
@@ -36,6 +41,12 @@ public class ServerRecordPlugin extends JavaPlugin {
             Bukkit.getLogger().log(Level.SEVERE, e.toString());
         }
 
+        PluginCommand rollbackCommand = getCommand("rollback");
+
+        if(rollbackCommand != null) {
+            rollbackCommand.setExecutor(new RollbackCommand(serverRecorder));
+        }
+
         blockListener = new BlockListener(serverRecorder);
 
         pluginManager.registerEvents(blockListener, this);
@@ -43,6 +54,7 @@ public class ServerRecordPlugin extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        // Stop the recorder on disable
         serverRecorder.stop();
     }
 }
